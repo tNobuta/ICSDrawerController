@@ -85,6 +85,9 @@
  */
 @property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
 
+
+@property (nonatomic) BOOL isBounce;
+
 /**
  @name Initialization
  */

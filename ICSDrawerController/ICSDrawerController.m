@@ -29,6 +29,7 @@ static const CGFloat kICSDrawerControllerDrawerDepth = 260.0f;
 static const CGFloat kICSDrawerControllerLeftViewInitialOffset = -60.0f;
 static const NSTimeInterval kICSDrawerControllerAnimationDuration = 0.5;
 static const CGFloat kICSDrawerControllerOpeningAnimationSpringDamping = 0.7f;
+static const CGFloat kICSDrawerControllerOpeningAnimationSpringDampingNone = 1;
 static const CGFloat kICSDrawerControllerOpeningAnimationSpringInitialVelocity = 0.1f;
 static const CGFloat kICSDrawerControllerClosingAnimationSpringDamping = 1.0f;
 static const CGFloat kICSDrawerControllerClosingAnimationSpringInitialVelocity = 0.5f;
@@ -324,7 +325,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
                           delay:0
-         usingSpringWithDamping:kICSDrawerControllerOpeningAnimationSpringDamping
+         usingSpringWithDamping:(self.isBounce?kICSDrawerControllerOpeningAnimationSpringDamping:kICSDrawerControllerOpeningAnimationSpringDampingNone)
           initialSpringVelocity:kICSDrawerControllerOpeningAnimationSpringInitialVelocity
                         options:UIViewAnimationOptionCurveLinear
                      animations:^{

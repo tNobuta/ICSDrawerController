@@ -45,6 +45,7 @@
     
     ICSDrawerController *drawer = [[ICSDrawerController alloc] initWithLeftViewController:colorsVC
                                                                      centerViewController:plainColorVC];
+    drawer.isBounce = NO;
     
     self.window.rootViewController = drawer;
     [self.window makeKeyAndVisible];

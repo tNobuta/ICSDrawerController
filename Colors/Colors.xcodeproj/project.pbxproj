@@ -14,7 +14,6 @@
 		5F0B651618A3A78800DFB3C1 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B651518A3A78800DFB3C1 /* main.m */; };
 		5F0B651A18A3A78800DFB3C1 /* ICSAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B651918A3A78800DFB3C1 /* ICSAppDelegate.m */; };
 		5F0B653D18A3A82300DFB3C1 /* ICSDrawerController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B653A18A3A82300DFB3C1 /* ICSDrawerController.m */; };
-		5F0B653E18A3A82300DFB3C1 /* ICSDropShadowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B653C18A3A82300DFB3C1 /* ICSDropShadowView.m */; };
 		5F0B654718A3AD1C00DFB3C1 /* ICSColorsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B654618A3AD1C00DFB3C1 /* ICSColorsViewController.m */; };
 		5F0B654A18A3E2C600DFB3C1 /* ICSPlainColorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F0B654918A3E2C600DFB3C1 /* ICSPlainColorViewController.m */; };
 		5F0B654E18A3F09800DFB3C1 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F0B654D18A3F09800DFB3C1 /* Images.xcassets */; };
@@ -33,8 +32,6 @@
 		5F0B651918A3A78800DFB3C1 /* ICSAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ICSAppDelegate.m; sourceTree = "<group>"; };
 		5F0B653918A3A82300DFB3C1 /* ICSDrawerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICSDrawerController.h; sourceTree = "<group>"; };
 		5F0B653A18A3A82300DFB3C1 /* ICSDrawerController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICSDrawerController.m; sourceTree = "<group>"; };
-		5F0B653B18A3A82300DFB3C1 /* ICSDropShadowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICSDropShadowView.h; sourceTree = "<group>"; };
-		5F0B653C18A3A82300DFB3C1 /* ICSDropShadowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICSDropShadowView.m; sourceTree = "<group>"; };
 		5F0B654518A3AD1C00DFB3C1 /* ICSColorsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICSColorsViewController.h; sourceTree = "<group>"; };
 		5F0B654618A3AD1C00DFB3C1 /* ICSColorsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICSColorsViewController.m; sourceTree = "<group>"; };
 		5F0B654818A3E2C600DFB3C1 /* ICSPlainColorViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICSPlainColorViewController.h; sourceTree = "<group>"; };
@@ -115,8 +112,6 @@
 			children = (
 				5F0B653918A3A82300DFB3C1 /* ICSDrawerController.h */,
 				5F0B653A18A3A82300DFB3C1 /* ICSDrawerController.m */,
-				5F0B653B18A3A82300DFB3C1 /* ICSDropShadowView.h */,
-				5F0B653C18A3A82300DFB3C1 /* ICSDropShadowView.m */,
 			);
 			name = ICSDrawerController;
 			path = ../../ICSDrawerController;
@@ -191,7 +186,6 @@
 				5F0B651A18A3A78800DFB3C1 /* ICSAppDelegate.m in Sources */,
 				5F0B653D18A3A82300DFB3C1 /* ICSDrawerController.m in Sources */,
 				5F0B651618A3A78800DFB3C1 /* main.m in Sources */,
-				5F0B653E18A3A82300DFB3C1 /* ICSDropShadowView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

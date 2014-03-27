@@ -23,7 +23,6 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #import "ICSDrawerController.h"
-#import "ICSDropShadowView.h"
 
 static const CGFloat kICSDrawerControllerDrawerDepth = 260.0f;
 static const CGFloat kICSDrawerControllerLeftViewInitialOffset = -60.0f;
@@ -33,6 +32,7 @@ static const CGFloat kICSDrawerControllerOpeningAnimationSpringDampingNone = 1;
 static const CGFloat kICSDrawerControllerOpeningAnimationSpringInitialVelocity = 0.1f;
 static const CGFloat kICSDrawerControllerClosingAnimationSpringDamping = 1.0f;
 static const CGFloat kICSDrawerControllerClosingAnimationSpringInitialVelocity = 0.5f;
+static const CGFloat kICSDrawerControllerDefaultShadowAlpha = 0.7f;
 
 typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 {
@@ -50,7 +50,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 @property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
 
 @property(nonatomic, strong) UIView *leftView;
-@property(nonatomic, strong) ICSDropShadowView *centerView;
+@property(nonatomic, strong) UIView *centerView;
 
 @property(nonatomic, strong) UITapGestureRecognizer *tapGestureRecognizer;
 @property(nonatomic, strong) UIPanGestureRecognizer *panGestureRecognizer;
@@ -72,6 +72,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     
     self = [super init];
     if (self) {
+        self.shadowAlpha = -1;
         _leftViewController = leftViewController;
         _centerViewController = centerViewController;
         
@@ -107,7 +108,13 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     
     // Initialize left and center view containers
     self.leftView = [[UIView alloc] initWithFrame:self.view.bounds];
-    self.centerView = [[ICSDropShadowView alloc] initWithFrame:self.view.bounds];    
+    self.centerView = [[UIView alloc] initWithFrame:self.view.bounds];
+    self.centerView.layer.shadowOffset = CGSizeZero;
+    self.centerView.layer.shadowOpacity = self.shadowAlpha != -1? self.shadowAlpha : kICSDrawerControllerDefaultShadowAlpha;
+
+    UIBezierPath *shadowPath = [UIBezierPath bezierPathWithRect:self.centerView.bounds];
+    self.centerView.layer.shadowPath = shadowPath.CGPath;
+
     self.leftView.autoresizingMask = self.view.autoresizingMask;
     self.centerView.autoresizingMask = self.view.autoresizingMask;
     

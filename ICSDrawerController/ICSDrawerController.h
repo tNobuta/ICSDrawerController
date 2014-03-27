@@ -85,8 +85,15 @@
  */
 @property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
 
-
+/**
+ *  Indicate whether there will be a bounce effect when opening
+ */
 @property (nonatomic) BOOL isBounce;
+
+/**
+ *  the alpha value of the centerViewController's shadow
+ */
+@property (nonatomic) float shadowAlpha;
 
 /**
  @name Initialization

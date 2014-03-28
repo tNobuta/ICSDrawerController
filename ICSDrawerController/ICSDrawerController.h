@@ -85,6 +85,8 @@
  */
 @property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
 
+@property (nonatomic) float drawerDepth;
+
 /**
  *  Indicate whether there will be a bounce effect when opening
  */

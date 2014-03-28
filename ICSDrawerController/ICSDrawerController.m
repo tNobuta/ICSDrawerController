@@ -73,6 +73,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     self = [super init];
     if (self) {
         self.shadowAlpha = -1;
+        self.drawerDepth = kICSDrawerControllerDrawerDepth;
         _leftViewController = leftViewController;
         _centerViewController = centerViewController;
         
@@ -328,7 +329,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     // Calculate the final frames for the container views
     CGRect leftViewFinalFrame = self.view.bounds;
     CGRect centerViewFinalFrame = self.view.bounds;
-    centerViewFinalFrame.origin.x = kICSDrawerControllerDrawerDepth;
+    centerViewFinalFrame.origin.x = self.drawerDepth;
     
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
                           delay:0

@@ -63,6 +63,9 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 
 
 @implementation ICSDrawerController
+{
+    UIView      *_statusBarView;
+}
 
 - (id)initWithLeftViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)leftViewController
             centerViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController
@@ -83,8 +86,11 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
         if ([_centerViewController respondsToSelector:@selector(setDrawer:)]) {
             _centerViewController.drawer = self;
         }
+
+        _statusBarView = [[UIApplication sharedApplication] valueForKey:@"statusBar"];
+        _statusBarView.clipsToBounds = YES;
     }
-    
+
     return self;
 }
 
@@ -239,13 +245,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
             
             CGRect l = self.leftView.frame;
             CGRect c = self.centerView.frame;
+            CGRect s = _statusBarView.frame;
             if (delta > kICSDrawerControllerDrawerDepth) {
                 l.origin.x = 0.0f;
                 c.origin.x = kICSDrawerControllerDrawerDepth;
+
+                if(self.shouldMoveStatusBar) s.origin.x = kICSDrawerControllerDrawerDepth;
             }
             else if (delta < 0.0f) {
                 l.origin.x = kICSDrawerControllerLeftViewInitialOffset;
                 c.origin.x = 0.0f;
+                if(self.shouldMoveStatusBar) s.origin.x = 0.0f;
             }
             else {
                 // While the centerView can move up to kICSDrawerControllerDrawerDepth points, to achieve a parallax effect
@@ -254,10 +264,12 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                            - (delta * kICSDrawerControllerLeftViewInitialOffset) / kICSDrawerControllerDrawerDepth;
 
                 c.origin.x = delta;
+                if(self.shouldMoveStatusBar) s.origin.x = delta;
             }
             
             self.leftView.frame = l;
             self.centerView.frame = c;
+            if(self.shouldMoveStatusBar) _statusBarView.frame = s;
             
             break;
         }
@@ -330,7 +342,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     CGRect leftViewFinalFrame = self.view.bounds;
     CGRect centerViewFinalFrame = self.view.bounds;
     centerViewFinalFrame.origin.x = self.drawerDepth;
-    
+
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
                           delay:0
          usingSpringWithDamping:(self.isBounce?kICSDrawerControllerOpeningAnimationSpringDamping:kICSDrawerControllerOpeningAnimationSpringDampingNone)
@@ -339,6 +351,13 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                      animations:^{
                          self.centerView.frame = centerViewFinalFrame;
                          self.leftView.frame = leftViewFinalFrame;
+
+                         if(self.shouldMoveStatusBar)
+                         {
+                             CGRect statusViewFinalFrame = _statusBarView.frame;
+                             statusViewFinalFrame.origin.x = self.drawerDepth;
+                            _statusBarView.frame = statusViewFinalFrame;
+                         }
                          
                          [self setNeedsStatusBarAppearanceUpdate];
                      }
@@ -357,7 +376,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     CGRect leftViewFinalFrame = self.leftView.frame;
     leftViewFinalFrame.origin.x = kICSDrawerControllerLeftViewInitialOffset;
     CGRect centerViewFinalFrame = self.view.bounds;
-    
+
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
                           delay:0
          usingSpringWithDamping:kICSDrawerControllerClosingAnimationSpringDamping
@@ -366,6 +385,13 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                      animations:^{
                          self.centerView.frame = centerViewFinalFrame;
                          self.leftView.frame = leftViewFinalFrame;
+
+                         if(self.shouldMoveStatusBar)
+                         {
+                             CGRect statusViewFinalFrame = _statusBarView.frame;
+                             statusViewFinalFrame.origin.x = 0;
+                             _statusBarView.frame = statusViewFinalFrame;
+                         }
                          
                          [self setNeedsStatusBarAppearanceUpdate];
                      }

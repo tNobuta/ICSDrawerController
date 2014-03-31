@@ -93,9 +93,14 @@
 @property (nonatomic) BOOL isBounce;
 
 /**
- *  the alpha value of the centerViewController's shadow
+ *  The alpha value of the centerViewController's shadow
  */
 @property (nonatomic) float shadowAlpha;
+
+/**
+ * Indicate whether move the application's statusbar when sliding center view
+ */
+@property (nonatomic) BOOL shouldMoveStatusBar;
 
 /**
  @name Initialization

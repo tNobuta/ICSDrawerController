@@ -240,17 +240,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                 delta = location.x - self.panGestureStartLocation.x;
             }
             else if (self.drawerState == ICSDrawerControllerStateClosing) {
-                delta = kICSDrawerControllerDrawerDepth - (self.panGestureStartLocation.x - location.x);
+                delta = self.drawerDepth  - (self.panGestureStartLocation.x - location.x);
             }
             
             CGRect l = self.leftView.frame;
             CGRect c = self.centerView.frame;
             CGRect s = _statusBarView.frame;
-            if (delta > kICSDrawerControllerDrawerDepth) {
+            if (delta > self.drawerDepth ) {
                 l.origin.x = 0.0f;
-                c.origin.x = kICSDrawerControllerDrawerDepth;
+                c.origin.x = self.drawerDepth ;
 
-                if(self.shouldMoveStatusBar) s.origin.x = kICSDrawerControllerDrawerDepth;
+                if(self.shouldMoveStatusBar) s.origin.x = self.drawerDepth ;
             }
             else if (delta < 0.0f) {
                 l.origin.x = kICSDrawerControllerLeftViewInitialOffset;
@@ -261,7 +261,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                 // While the centerView can move up to kICSDrawerControllerDrawerDepth points, to achieve a parallax effect
                 // the leftView has move no more than kICSDrawerControllerLeftViewInitialOffset points
                 l.origin.x = kICSDrawerControllerLeftViewInitialOffset
-                           - (delta * kICSDrawerControllerLeftViewInitialOffset) / kICSDrawerControllerDrawerDepth;
+                           - (delta * kICSDrawerControllerLeftViewInitialOffset) / self.drawerDepth ;
 
                 c.origin.x = delta;
                 if(self.shouldMoveStatusBar) s.origin.x = delta;
@@ -278,7 +278,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 
             if (self.drawerState == ICSDrawerControllerStateOpening) {
                 CGFloat centerViewLocation = self.centerView.frame.origin.x;
-                if (centerViewLocation == kICSDrawerControllerDrawerDepth) {
+                if (centerViewLocation == self.drawerDepth ) {
                     // Open the drawer without animation, as it has already being dragged in its final position
                     [self setNeedsStatusBarAppearanceUpdate];
                     [self didOpen];

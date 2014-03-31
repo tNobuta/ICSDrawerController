@@ -166,7 +166,11 @@
 /**
  The drawer object for this child controller
  */
+#if __has_feature(objc_arc)
 @property(nonatomic, weak) ICSDrawerController *drawer;
+#else
+@property(nonatomic, assign) ICSDrawerController *drawer;
+#endif
 
 @end
 

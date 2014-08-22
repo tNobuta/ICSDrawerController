@@ -102,6 +102,8 @@
  */
 @property (nonatomic) BOOL shouldMoveStatusBar;
 
+@property (nonatomic) BOOL enableGestures;
+
 /**
  @name Initialization
  */

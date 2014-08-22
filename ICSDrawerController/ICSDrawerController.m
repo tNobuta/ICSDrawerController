@@ -67,6 +67,11 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     UIView      *_statusBarView;
 }
 
+- (void)setEnableGestures:(BOOL)enableGestures {
+    self.tapGestureRecognizer.enabled = enableGestures;
+    self.panGestureRecognizer.enabled = enableGestures;
+}
+
 - (id)initWithLeftViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)leftViewController
             centerViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController
 {

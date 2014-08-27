@@ -61,6 +61,16 @@
     ICSDrawerController *drawer = [[ICSDrawerController alloc] initWithLeftViewController:left
                                                                      centerViewController:center];
  */
+
+typedef NS_ENUM(NSInteger, ICSDrawerControllerDirection)
+{
+    ICSDrawerControllerDirectionLeft = 1,
+    ICSDrawerControllerDirectionRight,
+    ICSDrawerControllerDirectionTop,
+    ICSDrawerControllerDirectionBottom
+};
+
+
 @interface ICSDrawerController : UIViewController
 
 /**
@@ -84,8 +94,6 @@
  @see replaceCenterViewControllerWithViewController:
  */
 @property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
-
-@property (nonatomic) float drawerDepth;
 
 /**
  *  Indicate whether there will be a bounce effect when opening
@@ -116,8 +124,9 @@
 
  @return An initialized drawer object or nil if the object couldn't be created.
  */
-- (id)initWithLeftViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)leftViewController
-            centerViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController;
+- (id)initWithCenterViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController;
+
+- (void)setViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)viewController slideOffset:(CGFloat)slideOffset forDirection:(ICSDrawerControllerDirection)direction;
 
 /**
  @name Drawer functionality
@@ -128,7 +137,7 @@
 
  Typically, you call this method as a result of tapping on a button in your center view controller.
  */
-- (void)open;
+- (void)openFromDirection:(ICSDrawerControllerDirection)direction;
 /**
  Closes the drawer.
 

@@ -25,7 +25,7 @@
 #import "ICSDrawerController.h"
 
 static const CGFloat kICSDrawerControllerDrawerDepth = 260.0f;
-static const CGFloat kICSDrawerControllerLeftViewInitialOffset = -60.0f;
+static const CGFloat kICSDrawerControllerSlideViewInitialOffset = -60.0f;
 static const NSTimeInterval kICSDrawerControllerAnimationDuration = 0.5;
 static const CGFloat kICSDrawerControllerOpeningAnimationSpringDamping = 0.7f;
 static const CGFloat kICSDrawerControllerOpeningAnimationSpringDampingNone = 1;
@@ -43,13 +43,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 };
 
 
-
 @interface ICSDrawerController () <UIGestureRecognizerDelegate>
 
+@property (nonatomic) float slideOffset;
+
 @property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *leftViewController;
+@property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *rightViewController;
+@property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *topViewController;
+@property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *bottomViewController;
 @property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
 
-@property(nonatomic, strong) UIView *leftView;
+@property(nonatomic, strong) UIView *slideView;
 @property(nonatomic, strong) UIView *centerView;
 
 @property(nonatomic, strong) UITapGestureRecognizer *tapGestureRecognizer;
@@ -64,7 +68,14 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 
 @implementation ICSDrawerController
 {
+    ICSDrawerControllerDirection    _currentOpenDirection;
+    NSMutableDictionary             *_slideOffsetForDirections;
     UIView      *_statusBarView;
+}
+
+- (CGFloat)slideOffset {
+    if(_currentOpenDirection == 0) return kICSDrawerControllerDrawerDepth;
+    return [_slideOffsetForDirections[@(_currentOpenDirection)] floatValue];
 }
 
 - (void)setEnableGestures:(BOOL)enableGestures {
@@ -72,22 +83,21 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     self.panGestureRecognizer.enabled = enableGestures;
 }
 
-- (id)initWithLeftViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)leftViewController
-            centerViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController
+- (id)initWithCenterViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)centerViewController
 {
-    NSParameterAssert(leftViewController);
     NSParameterAssert(centerViewController);
     
     self = [super init];
     if (self) {
+        _slideOffsetForDirections = [[NSMutableDictionary alloc] init];
+        _slideOffsetForDirections[@(ICSDrawerControllerDirectionLeft)] = @(kICSDrawerControllerDrawerDepth);
+        _slideOffsetForDirections[@(ICSDrawerControllerDirectionRight)] = @(kICSDrawerControllerDrawerDepth);
+        _slideOffsetForDirections[@(ICSDrawerControllerDirectionTop)] = @(kICSDrawerControllerDrawerDepth);
+        _slideOffsetForDirections[@(ICSDrawerControllerDirectionBottom)] = @(kICSDrawerControllerDrawerDepth);
+        _currentOpenDirection = 0;
         self.shadowAlpha = -1;
-        self.drawerDepth = kICSDrawerControllerDrawerDepth;
-        _leftViewController = leftViewController;
         _centerViewController = centerViewController;
-        
-        if ([_leftViewController respondsToSelector:@selector(setDrawer:)]) {
-            _leftViewController.drawer = self;
-        }
+ 
         if ([_centerViewController respondsToSelector:@selector(setDrawer:)]) {
             _centerViewController.drawer = self;
         }
@@ -97,6 +107,31 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     }
 
     return self;
+}
+
+- (void)setViewController:(UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *)viewController slideOffset:(CGFloat)slideOffset forDirection:(ICSDrawerControllerDirection)direction {
+    if ([viewController respondsToSelector:@selector(setDrawer:)]) {
+        viewController.drawer = self;
+    }
+    
+    _slideOffsetForDirections[@(direction)] = @(slideOffset);
+    
+    switch (direction) {
+        case ICSDrawerControllerDirectionLeft:
+            self.leftViewController = viewController;
+            break;
+        case ICSDrawerControllerDirectionRight:
+            self.rightViewController = viewController;
+            break;
+        case ICSDrawerControllerDirectionTop:
+            self.topViewController = viewController;
+            break;
+        case ICSDrawerControllerDirectionBottom:
+            self.bottomViewController = viewController;
+            break;
+        default:
+            break;
+    }
 }
 
 - (void)addCenterViewController
@@ -119,7 +154,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     
     // Initialize left and center view containers
-    self.leftView = [[UIView alloc] initWithFrame:self.view.bounds];
+    self.slideView = [[UIView alloc] initWithFrame:self.view.bounds];
     self.centerView = [[UIView alloc] initWithFrame:self.view.bounds];
     self.centerView.layer.shadowOffset = CGSizeZero;
     self.centerView.layer.shadowOpacity = self.shadowAlpha != -1? self.shadowAlpha : kICSDrawerControllerDefaultShadowAlpha;
@@ -127,7 +162,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     UIBezierPath *shadowPath = [UIBezierPath bezierPathWithRect:self.centerView.bounds];
     self.centerView.layer.shadowPath = shadowPath.CGPath;
 
-    self.leftView.autoresizingMask = self.view.autoresizingMask;
+    self.slideView.autoresizingMask = self.view.autoresizingMask;
     self.centerView.autoresizingMask = self.view.autoresizingMask;
     
     // Add the center view container
@@ -207,11 +242,31 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     NSParameterAssert([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]]);
     CGPoint velocity = [(UIPanGestureRecognizer *)gestureRecognizer velocityInView:self.view];
     
-    if (self.drawerState == ICSDrawerControllerStateClosed && velocity.x > 0.0f) {
-        return YES;
+    if (self.drawerState == ICSDrawerControllerStateClosed) {
+        if (self.leftViewController && velocity.x > 0.0f) {
+            _currentOpenDirection = ICSDrawerControllerDirectionLeft;
+            return YES;
+        }else if (self.rightViewController && velocity.x < 0.0f) {
+            _currentOpenDirection = ICSDrawerControllerDirectionRight;
+            return YES;
+        }else if (self.topViewController && velocity.y > 0.0f) {
+            _currentOpenDirection = ICSDrawerControllerDirectionTop;
+            return YES;
+        }else if (self.bottomViewController && velocity.x < 0.0f) {
+            _currentOpenDirection = ICSDrawerControllerDirectionBottom;
+            return YES;
+        }
     }
-    else if (self.drawerState == ICSDrawerControllerStateOpen && velocity.x < 0.0f) {
-        return YES;
+    else if (self.drawerState == ICSDrawerControllerStateOpen) {
+        if (_currentOpenDirection == ICSDrawerControllerDirectionLeft && velocity.x < 0.0f) {
+            return YES;
+        }else if (_currentOpenDirection == ICSDrawerControllerDirectionRight && velocity.x > 0.0f) {
+            return YES;
+        }else if (_currentOpenDirection == ICSDrawerControllerDirectionTop && velocity.y < 0.0f) {
+            return YES;
+        }else if (_currentOpenDirection == ICSDrawerControllerDirectionBottom && velocity.x > 0.0f) {
+            return YES;
+        }
     }
     
     return NO;
@@ -219,7 +274,7 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 
 - (void)panGestureRecognized:(UIPanGestureRecognizer *)panGestureRecognizer
 {
-    NSParameterAssert(self.leftView);
+    NSParameterAssert(self.slideView);
     NSParameterAssert(self.centerView);
     
     UIGestureRecognizerState state = panGestureRecognizer.state;
@@ -241,59 +296,105 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
         case UIGestureRecognizerStateChanged:
         {
             CGFloat delta = 0.0f;
+            NSInteger signFlag =( _currentOpenDirection == ICSDrawerControllerDirectionLeft ||  _currentOpenDirection == ICSDrawerControllerDirectionTop) ? 1 : -1;
+            
             if (self.drawerState == ICSDrawerControllerStateOpening) {
-                delta = location.x - self.panGestureStartLocation.x;
+                if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                    delta = location.x - self.panGestureStartLocation.x;
+                }else {
+                    delta = location.y - self.panGestureStartLocation.y;
+                }
             }
             else if (self.drawerState == ICSDrawerControllerStateClosing) {
-                delta = self.drawerDepth  - (self.panGestureStartLocation.x - location.x);
+                if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                    delta = self.slideOffset * signFlag  - (self.panGestureStartLocation.x - location.x);
+                }else {
+                    delta = self.slideOffset * signFlag  - (self.panGestureStartLocation.y - location.y);
+                }
             }
             
-            CGRect l = self.leftView.frame;
+            CGRect l = self.slideView.frame;
             CGRect c = self.centerView.frame;
             CGRect s = _statusBarView.frame;
-            if (delta > self.drawerDepth ) {
-                l.origin.x = 0.0f;
-                c.origin.x = self.drawerDepth ;
+            
+            if (((_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionTop) && delta > self.slideOffset) || ((_currentOpenDirection == ICSDrawerControllerDirectionRight || _currentOpenDirection == ICSDrawerControllerDirectionBottom) && delta < -self.slideOffset)) {
+                
+                if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                    l.origin.x = 0.0f;
+                    c.origin.x = self.slideOffset * signFlag;
+                }else {
+                    l.origin.y = 0.0f;
+                    c.origin.y = self.slideOffset * signFlag;
+                }
 
-                if(self.shouldMoveStatusBar) s.origin.x = self.drawerDepth ;
+                if(self.shouldMoveStatusBar){
+                    if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                         s.origin.x = self.slideOffset * signFlag;
+                    }else {
+                        s.origin.y = self.slideOffset * signFlag;
+                    }
+                }
             }
-            else if (delta < 0.0f) {
-                l.origin.x = kICSDrawerControllerLeftViewInitialOffset;
+            else if (((_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionTop) && delta < 0.0f) || ((_currentOpenDirection == ICSDrawerControllerDirectionRight || _currentOpenDirection == ICSDrawerControllerDirectionBottom) && delta > 0.0f)) {
+                if (_currentOpenDirection == ICSDrawerControllerDirectionLeft) {
+                    l.origin.x = kICSDrawerControllerSlideViewInitialOffset;
+                }else if (_currentOpenDirection == ICSDrawerControllerDirectionRight){
+                    l.origin.x = - kICSDrawerControllerSlideViewInitialOffset;
+                }else if (_currentOpenDirection == ICSDrawerControllerDirectionTop){
+                    l.origin.y = kICSDrawerControllerSlideViewInitialOffset;
+                }else if (_currentOpenDirection == ICSDrawerControllerDirectionBottom){
+                    l.origin.y = - kICSDrawerControllerSlideViewInitialOffset;
+                }
+                
                 c.origin.x = 0.0f;
-                if(self.shouldMoveStatusBar) s.origin.x = 0.0f;
+                if(self.shouldMoveStatusBar) {
+                    if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                        s.origin.x = 0.0f;
+                    }else {
+                        s.origin.y = 0.0f;
+                    }
+                }
             }
             else {
                 // While the centerView can move up to kICSDrawerControllerDrawerDepth points, to achieve a parallax effect
                 // the leftView has move no more than kICSDrawerControllerLeftViewInitialOffset points
-                l.origin.x = kICSDrawerControllerLeftViewInitialOffset
-                           - (delta * kICSDrawerControllerLeftViewInitialOffset) / self.drawerDepth ;
-
-                c.origin.x = delta;
-                if(self.shouldMoveStatusBar) s.origin.x = delta;
+                if(_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                    l.origin.x = signFlag * kICSDrawerControllerSlideViewInitialOffset
+                    - (delta * kICSDrawerControllerSlideViewInitialOffset) / self.slideOffset ;
+                    c.origin.x = delta;
+                    if(self.shouldMoveStatusBar) s.origin.x = delta;
+                }else {
+                    l.origin.y = signFlag * kICSDrawerControllerSlideViewInitialOffset
+                    - (delta * kICSDrawerControllerSlideViewInitialOffset) / self.slideOffset ;
+                    c.origin.y = delta;
+                    if(self.shouldMoveStatusBar) s.origin.y = delta;
+                }
             }
             
-            self.leftView.frame = l;
+            self.slideView.frame = l;
             self.centerView.frame = c;
             if(self.shouldMoveStatusBar) _statusBarView.frame = s;
-            
             break;
         }
             
         case UIGestureRecognizerStateEnded:
 
             if (self.drawerState == ICSDrawerControllerStateOpening) {
-                CGFloat centerViewLocation = self.centerView.frame.origin.x;
-                if (centerViewLocation == self.drawerDepth ) {
+                CGFloat centerViewLocation = (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight)? self.centerView.frame.origin.x : self.centerView.frame.origin.y;
+                
+                if (fabsf(centerViewLocation) == self.slideOffset ) {
                     // Open the drawer without animation, as it has already being dragged in its final position
                     [self setNeedsStatusBarAppearanceUpdate];
                     [self didOpen];
                 }
-                else if (centerViewLocation > self.view.bounds.size.width / 3
-                         && velocity.x > 0.0f) {
+                else if ((_currentOpenDirection == ICSDrawerControllerDirectionLeft && centerViewLocation > self.view.bounds.size.width / 3
+                          && velocity.x > 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionRight && centerViewLocation < - self.view.bounds.size.width / 3
+                                                    && velocity.x < 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionTop && centerViewLocation > self.view.bounds.size.height / 3
+                                                                              && velocity.x > 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionBottom && centerViewLocation < - self.view.bounds.size.height / 3
+                                                                                                        && velocity.x < 0.0f)) {
                     // Animate the drawer opening
                     [self animateOpening];
-                }
-                else {
+                }else {
                     // Animate the drawer closing, as the opening gesture hasn't been completed or it has
                     // been reverted by the user
                     [self didOpen];
@@ -302,14 +403,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                 }
 
             } else if (self.drawerState == ICSDrawerControllerStateClosing) {
-                CGFloat centerViewLocation = self.centerView.frame.origin.x;
+                CGFloat centerViewLocation = (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight)? self.centerView.frame.origin.x : self.centerView.frame.origin.y;
                 if (centerViewLocation == 0.0f) {
                     // Close the drawer without animation, as it has already being dragged in its final position
                     [self setNeedsStatusBarAppearanceUpdate];
                     [self didClose];
                 }
-                else if (centerViewLocation < (2 * self.view.bounds.size.width) / 3
-                         && velocity.x < 0.0f) {
+                else if ((_currentOpenDirection == ICSDrawerControllerDirectionLeft && centerViewLocation < self.slideOffset / 2
+                          && velocity.x < 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionRight && centerViewLocation > - self.slideOffset / 2
+                                                    && velocity.x > 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionTop && centerViewLocation < self.slideOffset / 2
+                                                                              && velocity.y < 0.0f) || (_currentOpenDirection == ICSDrawerControllerDirectionBottom && centerViewLocation > - self.slideOffset / 2
+                                                                                                        && velocity.y > 0.0f)) {
                     // Animate the drawer closing
                     [self animateClosing];
                 }
@@ -317,13 +421,13 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                     // Animate the drawer opening, as the opening gesture hasn't been completed or it has
                     // been reverted by the user
                     [self didClose];
-
+                    
                     // Here we save the current position for the leftView since
                     // we want the opening animation to start from the current position
                     // and not the one that is set in 'willOpen'
-                    CGRect l = self.leftView.frame;
+                    CGRect l = self.slideView.frame;
                     [self willOpen];
-                    self.leftView.frame = l;
+                    self.slideView.frame = l;
                     
                     [self animateOpening];
                 }
@@ -340,13 +444,27 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)animateOpening
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateOpening);
-    NSParameterAssert(self.leftView);
+    NSParameterAssert(self.slideView);
     NSParameterAssert(self.centerView);
     
     // Calculate the final frames for the container views
-    CGRect leftViewFinalFrame = self.view.bounds;
+    CGRect slideViewFinalFrame = self.view.bounds;
     CGRect centerViewFinalFrame = self.view.bounds;
-    centerViewFinalFrame.origin.x = self.drawerDepth;
+    
+    switch (_currentOpenDirection) {
+        case ICSDrawerControllerDirectionLeft:
+            centerViewFinalFrame.origin.x = self.slideOffset;
+            break;
+        case ICSDrawerControllerDirectionRight:
+            centerViewFinalFrame.origin.x = -self.slideOffset;
+            break;
+        case ICSDrawerControllerDirectionTop:
+            centerViewFinalFrame.origin.y = self.slideOffset;
+            break;
+        case ICSDrawerControllerDirectionBottom:
+            centerViewFinalFrame.origin.y = -self.slideOffset;
+            break;
+    }
 
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
                           delay:0
@@ -355,12 +473,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                         options:UIViewAnimationOptionCurveLinear
                      animations:^{
                          self.centerView.frame = centerViewFinalFrame;
-                         self.leftView.frame = leftViewFinalFrame;
+                         self.slideView.frame = slideViewFinalFrame;
 
                          if(self.shouldMoveStatusBar)
                          {
                              CGRect statusViewFinalFrame = _statusBarView.frame;
-                             statusViewFinalFrame.origin.x = self.drawerDepth;
+                             if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                                 statusViewFinalFrame.origin.x = centerViewFinalFrame.origin.x;
+                             }else {
+                                 statusViewFinalFrame.origin.y = centerViewFinalFrame.origin.y;
+                             }
+                             
                             _statusBarView.frame = statusViewFinalFrame;
                          }
                          
@@ -374,12 +497,28 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)animateClosing
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateClosing);
-    NSParameterAssert(self.leftView);
+    NSParameterAssert(self.slideView);
     NSParameterAssert(self.centerView);
     
     // Calculate final frames for the container views
-    CGRect leftViewFinalFrame = self.leftView.frame;
-    leftViewFinalFrame.origin.x = kICSDrawerControllerLeftViewInitialOffset;
+    CGRect slideViewFinalFrame = self.slideView.frame;
+    
+    switch (_currentOpenDirection) {
+        case ICSDrawerControllerDirectionLeft:
+            slideViewFinalFrame.origin.x = kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionRight:
+            slideViewFinalFrame.origin.x = -kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionTop:
+            slideViewFinalFrame.origin.y = kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionBottom:
+            slideViewFinalFrame.origin.x = -kICSDrawerControllerSlideViewInitialOffset;
+            break;
+    }
+
+    
     CGRect centerViewFinalFrame = self.view.bounds;
 
     [UIView animateWithDuration:kICSDrawerControllerAnimationDuration
@@ -389,12 +528,17 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                         options:UIViewAnimationOptionCurveLinear
                      animations:^{
                          self.centerView.frame = centerViewFinalFrame;
-                         self.leftView.frame = leftViewFinalFrame;
+                         self.slideView.frame = slideViewFinalFrame;
 
                          if(self.shouldMoveStatusBar)
                          {
                              CGRect statusViewFinalFrame = _statusBarView.frame;
-                             statusViewFinalFrame.origin.x = 0;
+                             if (_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionRight) {
+                                 statusViewFinalFrame.origin.x = 0;
+                             }else {
+                                 statusViewFinalFrame.origin.y = 0;
+                             }
+                             
                              _statusBarView.frame = statusViewFinalFrame;
                          }
                          
@@ -405,12 +549,38 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                      }];
 }
 
+- (UIViewController <ICSDrawerControllerChild, ICSDrawerControllerPresenting>*)viewControllerForCurrentDirection{
+    UIViewController <ICSDrawerControllerChild, ICSDrawerControllerPresenting>*viewController = nil;
+    switch (_currentOpenDirection) {
+        case ICSDrawerControllerDirectionLeft:
+            viewController = self.leftViewController;
+            break;
+        case ICSDrawerControllerDirectionRight:
+            viewController = self.rightViewController;
+            break;
+        case ICSDrawerControllerDirectionTop:
+            viewController = self.topViewController;
+            break;
+        case ICSDrawerControllerDirectionBottom:
+            viewController = self.bottomViewController;
+            break;
+        default:
+            break;
+    }
+    
+    return viewController;
+}
+
 #pragma mark - Opening the drawer
 
-- (void)open
+- (void)openFromDirection:(ICSDrawerControllerDirection)direction
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateClosed);
-
+    _currentOpenDirection = direction;
+    
+    UIViewController *slideController = [self viewControllerForCurrentDirection];
+    if(!slideController) return;
+    
     [self willOpen];
     
     [self animateOpening];
@@ -419,31 +589,44 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)willOpen
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateClosed);
-    NSParameterAssert(self.leftView);
+    NSParameterAssert(self.slideView);
     NSParameterAssert(self.centerView);
-    NSParameterAssert(self.leftViewController);
     NSParameterAssert(self.centerViewController);
     
+    UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *slideController = [self viewControllerForCurrentDirection];
     // Keep track that the drawer is opening
     self.drawerState = ICSDrawerControllerStateOpening;
     
-    // Position the left view
+    // Position the slide view
     CGRect f = self.view.bounds;
-    f.origin.x = kICSDrawerControllerLeftViewInitialOffset;
-    NSParameterAssert(f.origin.x < 0.0f);
-    self.leftView.frame = f;
+    switch (_currentOpenDirection) {
+        case ICSDrawerControllerDirectionLeft:
+            f.origin.x = kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionRight:
+            f.origin.x = -kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionTop:
+            f.origin.y = kICSDrawerControllerSlideViewInitialOffset;
+            break;
+        case ICSDrawerControllerDirectionBottom:
+            f.origin.y = -kICSDrawerControllerSlideViewInitialOffset;
+            break;
+    }
+    
+    self.slideView.frame = f;
     
     // Start adding the left view controller to the container
-    [self addChildViewController:self.leftViewController];
-    self.leftViewController.view.frame = self.leftView.bounds;
-    [self.leftView addSubview:self.leftViewController.view];
+    [self addChildViewController:slideController];
+    slideController.view.frame = self.slideView.bounds;
+    [self.slideView addSubview:slideController.view];
 
     // Add the left view to the view hierarchy
-    [self.view insertSubview:self.leftView belowSubview:self.centerView];
+    [self.view insertSubview:self.slideView belowSubview:self.centerView];
     
     // Notify the child view controllers that the drawer is about to open
-    if ([self.leftViewController respondsToSelector:@selector(drawerControllerWillOpen:)]) {
-        [self.leftViewController drawerControllerWillOpen:self];
+    if ([slideController respondsToSelector:@selector(drawerControllerWillOpen:)]) {
+        [slideController drawerControllerWillOpen:self];
     }
     if ([self.centerViewController respondsToSelector:@selector(drawerControllerWillOpen:)]) {
         [self.centerViewController drawerControllerWillOpen:self];
@@ -453,11 +636,11 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)didOpen
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateOpening);
-    NSParameterAssert(self.leftViewController);
     NSParameterAssert(self.centerViewController);
     
     // Complete adding the left controller to the container
-    [self.leftViewController didMoveToParentViewController:self];
+    UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *slideController = [self viewControllerForCurrentDirection];
+    [slideController didMoveToParentViewController:self];
     
     [self addClosingGestureRecognizers];
     
@@ -465,8 +648,8 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     self.drawerState = ICSDrawerControllerStateOpen;
     
     // Notify the child view controllers that the drawer is open
-    if ([self.leftViewController respondsToSelector:@selector(drawerControllerDidOpen:)]) {
-        [self.leftViewController drawerControllerDidOpen:self];
+    if ([slideController respondsToSelector:@selector(drawerControllerDidOpen:)]) {
+        [slideController drawerControllerDidOpen:self];
     }
     if ([self.centerViewController respondsToSelector:@selector(drawerControllerDidOpen:)]) {
         [self.centerViewController drawerControllerDidOpen:self];
@@ -487,18 +670,18 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)willClose
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateOpen);
-    NSParameterAssert(self.leftViewController);
     NSParameterAssert(self.centerViewController);
     
+    UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *slideController = [self viewControllerForCurrentDirection];
     // Start removing the left controller from the container
-    [self.leftViewController willMoveToParentViewController:nil];
+    [slideController willMoveToParentViewController:nil];
     
     // Keep track that the drawer is closing
     self.drawerState = ICSDrawerControllerStateClosing;
     
     // Notify the child view controllers that the drawer is about to close
-    if ([self.leftViewController respondsToSelector:@selector(drawerControllerWillClose:)]) {
-        [self.leftViewController drawerControllerWillClose:self];
+    if ([slideController respondsToSelector:@selector(drawerControllerWillClose:)]) {
+        [slideController drawerControllerWillClose:self];
     }
     if ([self.centerViewController respondsToSelector:@selector(drawerControllerWillClose:)]) {
         [self.centerViewController drawerControllerWillClose:self];
@@ -508,17 +691,18 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 - (void)didClose
 {
     NSParameterAssert(self.drawerState == ICSDrawerControllerStateClosing);
-    NSParameterAssert(self.leftView);
+    NSParameterAssert(self.slideView);
     NSParameterAssert(self.centerView);
-    NSParameterAssert(self.leftViewController);
     NSParameterAssert(self.centerViewController);
     
+    UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *slideController = [self viewControllerForCurrentDirection];
+    
     // Complete removing the left view controller from the container
-    [self.leftViewController.view removeFromSuperview];
-    [self.leftViewController removeFromParentViewController];
+    [slideController.view removeFromSuperview];
+    [slideController removeFromParentViewController];
     
     // Remove the left view from the view hierarchy
-    [self.leftView removeFromSuperview];
+    [self.slideView removeFromSuperview];
     
     [self removeClosingGestureRecognizers];
     
@@ -526,8 +710,8 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     self.drawerState = ICSDrawerControllerStateClosed;
     
     // Notify the child view controllers that the drawer is closed
-    if ([self.leftViewController respondsToSelector:@selector(drawerControllerDidClose:)]) {
-        [self.leftViewController drawerControllerDidClose:self];
+    if ([slideController respondsToSelector:@selector(drawerControllerDidClose:)]) {
+        [slideController drawerControllerDidClose:self];
     }
     if ([self.centerViewController respondsToSelector:@selector(drawerControllerDidClose:)]) {
         [self.centerViewController drawerControllerDidClose:self];

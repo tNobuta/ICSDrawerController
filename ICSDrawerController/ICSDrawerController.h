@@ -70,6 +70,13 @@ typedef NS_ENUM(NSInteger, ICSDrawerControllerDirection)
     ICSDrawerControllerDirectionBottom
 };
 
+typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
+{
+    ICSDrawerControllerStateClosed = 0,
+    ICSDrawerControllerStateOpening,
+    ICSDrawerControllerStateOpen,
+    ICSDrawerControllerStateClosing
+};
 
 @interface ICSDrawerController : UIViewController
 
@@ -77,14 +84,7 @@ typedef NS_ENUM(NSInteger, ICSDrawerControllerDirection)
  @name Child controllers
  */
 
-/**
- The left view controller.
 
- This controller shows up when the drawer opens. You add it when initializing the drawer object.
- 
- @see initWithLeftViewController:centerViewController:
- */
-@property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *leftViewController;
 /**
  The center view controller.
 
@@ -94,6 +94,11 @@ typedef NS_ENUM(NSInteger, ICSDrawerControllerDirection)
  @see replaceCenterViewControllerWithViewController:
  */
 @property(nonatomic, strong, readonly) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *centerViewController;
+
+/**
+ *  Current drawer state
+ */
+@property(nonatomic, assign) ICSDrawerControllerState drawerState;
 
 /**
  *  Indicate whether there will be a bounce effect when opening
@@ -111,6 +116,11 @@ typedef NS_ENUM(NSInteger, ICSDrawerControllerDirection)
 @property (nonatomic) BOOL shouldMoveStatusBar;
 
 @property (nonatomic) BOOL enableGestures;
+
+/**
+ *  Show the maskView when drawer is opened
+ */
+@property (nonatomic, strong) UIView *maskView;
 
 /**
  @name Initialization

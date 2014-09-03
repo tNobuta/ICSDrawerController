@@ -34,18 +34,10 @@ static const CGFloat kICSDrawerControllerClosingAnimationSpringDamping = 1.0f;
 static const CGFloat kICSDrawerControllerClosingAnimationSpringInitialVelocity = 0.5f;
 static const CGFloat kICSDrawerControllerDefaultShadowAlpha = 0.7f;
 
-typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
-{
-    ICSDrawerControllerStateClosed = 0,
-    ICSDrawerControllerStateOpening,
-    ICSDrawerControllerStateOpen,
-    ICSDrawerControllerStateClosing
-};
-
 
 @interface ICSDrawerController () <UIGestureRecognizerDelegate>
 
-@property (nonatomic) float slideOffset;
+@property (nonatomic) CGFloat slideOffset;
 
 @property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *leftViewController;
 @property(nonatomic, strong, readwrite) UIViewController<ICSDrawerControllerChild, ICSDrawerControllerPresenting> *rightViewController;
@@ -59,8 +51,6 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
 @property(nonatomic, strong) UITapGestureRecognizer *tapGestureRecognizer;
 @property(nonatomic, strong) UIPanGestureRecognizer *panGestureRecognizer;
 @property(nonatomic, assign) CGPoint panGestureStartLocation;
-
-@property(nonatomic, assign) ICSDrawerControllerState drawerState;
 
 @end
 
@@ -334,6 +324,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                         s.origin.y = self.slideOffset * signFlag;
                     }
                 }
+                
+                if (self.maskView) {
+                    self.maskView.alpha = 1;
+                }
             }
             else if (((_currentOpenDirection == ICSDrawerControllerDirectionLeft || _currentOpenDirection == ICSDrawerControllerDirectionTop) && delta < 0.0f) || ((_currentOpenDirection == ICSDrawerControllerDirectionRight || _currentOpenDirection == ICSDrawerControllerDirectionBottom) && delta > 0.0f)) {
                 if (_currentOpenDirection == ICSDrawerControllerDirectionLeft) {
@@ -353,6 +347,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                     }else {
                         s.origin.y = 0.0f;
                     }
+                }
+                
+                if (self.maskView) {
+                    self.maskView.alpha = 0;
                 }
             }
             else {
@@ -374,6 +372,9 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
             self.slideView.frame = l;
             self.centerView.frame = c;
             if(self.shouldMoveStatusBar) _statusBarView.frame = s;
+            if (self.maskView) {
+                self.maskView.alpha = fabsf(delta)/self.slideOffset;
+            }
             break;
         }
             
@@ -450,7 +451,6 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     // Calculate the final frames for the container views
     CGRect slideViewFinalFrame = self.view.bounds;
     CGRect centerViewFinalFrame = self.view.bounds;
-    
     switch (_currentOpenDirection) {
         case ICSDrawerControllerDirectionLeft:
             centerViewFinalFrame.origin.x = self.slideOffset;
@@ -485,6 +485,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                              }
                              
                             _statusBarView.frame = statusViewFinalFrame;
+                         }
+                         
+                         if (self.maskView) {
+                             self.maskView.alpha = 1;
                          }
                          
                          [self setNeedsStatusBarAppearanceUpdate];
@@ -540,6 +544,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
                              }
                              
                              _statusBarView.frame = statusViewFinalFrame;
+                         }
+                         
+                         if (self.maskView) {
+                             self.maskView.alpha = 0;
                          }
                          
                          [self setNeedsStatusBarAppearanceUpdate];
@@ -624,6 +632,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     // Add the left view to the view hierarchy
     [self.view insertSubview:self.slideView belowSubview:self.centerView];
     
+    if (self.maskView) {
+        [self.centerView addSubview:self.maskView];
+    }
+    
     // Notify the child view controllers that the drawer is about to open
     if ([slideController respondsToSelector:@selector(drawerControllerWillOpen:)]) {
         [slideController drawerControllerWillOpen:self];
@@ -705,6 +717,10 @@ typedef NS_ENUM(NSUInteger, ICSDrawerControllerState)
     [self.slideView removeFromSuperview];
     
     [self removeClosingGestureRecognizers];
+    
+    if (self.maskView) {
+        [self.maskView removeFromSuperview];
+    }
     
     // Keep track that the drawer is closed
     self.drawerState = ICSDrawerControllerStateClosed;
